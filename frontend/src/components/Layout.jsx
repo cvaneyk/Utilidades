@@ -144,7 +144,7 @@ export default function Layout() {
       </aside>
 
       {/* Main Content */}
-      <main className="main-content pt-[60px] lg:pt-0">
+      <main className="main-content lg:pt-0">
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>

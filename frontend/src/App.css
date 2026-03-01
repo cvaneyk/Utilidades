@@ -9,7 +9,6 @@
 .main-content {
     flex: 1;
     margin-left: 16rem;
-    padding: 2rem;
     transition: margin-left 0.3s ease;
 }
 
@@ -17,6 +16,7 @@
     .main-content {
         margin-left: 0;
         padding: 1rem;
+        padding-top: 70px;
     }
 }
 
@@ -138,6 +138,7 @@
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
