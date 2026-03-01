@@ -1,7 +1,7 @@
 {
   "design_system": {
     "identity": {
-      "name": "E1 Utility Suite",
+      "name": "CV Utilities",
       "vibe": "Bio-Digital Noir",
       "description": "A high-performance utility dashboard that feels like a cyberpunk command center. Deep, organic dark backgrounds pierced by bioluminescent accents.",
       "emotion": "Precision, Power, Mystery",
@@ -115,10 +115,22 @@
   "motion": {
     "reduced_motion": "respect-preference",
     "page_transition": {
-      "initial": { "opacity": 0, "y": 20 },
-      "animate": { "opacity": 1, "y": 0 },
-      "exit": { "opacity": 0, "y": -20 },
-      "transition": { "duration": 0.3, "ease": "easeOut" }
+      "initial": {
+        "opacity": 0,
+        "y": 20
+      },
+      "animate": {
+        "opacity": 1,
+        "y": 0
+      },
+      "exit": {
+        "opacity": 0,
+        "y": -20
+      },
+      "transition": {
+        "duration": 0.3,
+        "ease": "easeOut"
+      }
     },
     "hover_effects": {
       "card_lift": "hover:-translate-y-1 transition-transform duration-300",
@@ -129,37 +141,75 @@
     "Home": {
       "layout": "dashboard_grid",
       "elements": [
-        { "name": "Hero Section", "description": "Welcome message with quick stats or search bar" },
-        { "name": "Utility Cards", "description": "Grid of all available tools with icons and short descriptions" }
+        {
+          "name": "Hero Section",
+          "description": "Welcome message with quick stats or search bar"
+        },
+        {
+          "name": "Utility Cards",
+          "description": "Grid of all available tools with icons and short descriptions"
+        }
       ]
     },
     "QR_Generator": {
       "layout": "split_screen",
-      "features": ["Color Picker (Foreground/Background)", "Content Type Tabs (URL, Text, Wifi)", "Live Preview", "Download Options (PNG, SVG)"]
+      "features": [
+        "Color Picker (Foreground/Background)",
+        "Content Type Tabs (URL, Text, Wifi)",
+        "Live Preview",
+        "Download Options (PNG, SVG)"
+      ]
     },
     "Shortlinks": {
       "layout": "centered_tool",
-      "features": ["Input field with 'Shorten' button", "History Table (Original, Short, Clicks, Date)", "Copy to Clipboard action"]
+      "features": [
+        "Input field with 'Shorten' button",
+        "History Table (Original, Short, Clicks, Date)",
+        "Copy to Clipboard action"
+      ]
     },
     "Image_Converter": {
       "layout": "centered_tool",
-      "features": ["Drag & Drop Zone (dashed border, glowing on hover)", "Batch List", "Conversion Progress", "Download All button"]
+      "features": [
+        "Drag & Drop Zone (dashed border, glowing on hover)",
+        "Batch List",
+        "Conversion Progress",
+        "Download All button"
+      ]
     },
     "Text_to_HTML": {
       "layout": "split_screen",
-      "features": ["Markdown/Text Input (Monaco style)", "HTML Output (Read only)", "Copy Code button", "Live Preview Toggle"]
+      "features": [
+        "Markdown/Text Input (Monaco style)",
+        "HTML Output (Read only)",
+        "Copy Code button",
+        "Live Preview Toggle"
+      ]
     },
     "Password_Generator": {
       "layout": "centered_tool",
-      "features": ["Huge Password Display", "Length Slider", "Character Type Toggles (Uppercase, Symbols, Numbers)", "Strength Indicator Meter"]
+      "features": [
+        "Huge Password Display",
+        "Length Slider",
+        "Character Type Toggles (Uppercase, Symbols, Numbers)",
+        "Strength Indicator Meter"
+      ]
     },
     "Word_Counter": {
       "layout": "split_screen",
-      "features": ["Large Text Area", "Floating Stats Panel (Words, Chars, Sentences, Reading Time)"]
+      "features": [
+        "Large Text Area",
+        "Floating Stats Panel (Words, Chars, Sentences, Reading Time)"
+      ]
     },
     "Base64": {
       "layout": "centered_tool",
-      "features": ["Encoder/Decoder Tabs", "Input Text Area", "Output Result", "Copy/Clear Actions"]
+      "features": [
+        "Encoder/Decoder Tabs",
+        "Input Text Area",
+        "Output Result",
+        "Copy/Clear Actions"
+      ]
     }
   },
   "assets": {

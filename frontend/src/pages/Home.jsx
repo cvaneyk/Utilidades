@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { 
-  QrCode, 
-  Link2, 
-  Image, 
-  FileCode, 
-  Key, 
-  Type, 
+import {
+  QrCode,
+  Link2,
+  Image,
+  FileCode,
+  Key,
+  Type,
   Binary,
   ArrowRight,
   Sparkles,
@@ -118,7 +118,7 @@ export default function Home() {
             <span>11 Herramientas Potentes en Un Solo Lugar</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
-            E1 Utility Suite
+            Utilities
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
             Tu kit de herramientas todo-en-uno para tareas cotidianas. Rápido, bonito y construido con precisión.
