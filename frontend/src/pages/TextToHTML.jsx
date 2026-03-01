@@ -5,8 +5,8 @@ import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import { toast } from "sonner";
-import { 
-  FileCode, Copy, Code, Eye, 
+import {
+  FileCode, Copy, Code, Eye,
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
   Link as LinkIcon, Heading1, Heading2, Quote, Undo, Redo
@@ -192,15 +192,26 @@ export default function TextToHTML() {
       },
     },
     onUpdate: ({ editor }) => {
-      setHtmlOutput(editor.getHTML());
+      setHtmlOutput(cleanHTML(editor.getHTML()));
     },
   });
 
   useEffect(() => {
     if (editor) {
-      setHtmlOutput(editor.getHTML());
+      setHtmlOutput(cleanHTML(editor.getHTML()));
     }
   }, [editor]);
+
+  // Clean Tiptap's default output:
+  // - removes <p> wrappers inside <li> elements
+  // - removes trailing empty <p></p> tags
+  const cleanHTML = (html) => {
+    return html
+      .replace(/<li><p>/g, '<li>')
+      .replace(/<\/p><\/li>/g, '</li>')
+      .replace(/(<p><\/p>\s*)+$/g, '')
+      .trim();
+  };
 
   const getHTML = () => {
     return htmlOutput;
@@ -288,9 +299,9 @@ export default function TextToHTML() {
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={copyHTML}
                   data-testid="copy-html-btn"
                 >
@@ -302,7 +313,7 @@ export default function TextToHTML() {
           </CardHeader>
           <CardContent>
             {viewMode === "code" ? (
-              <div 
+              <div
                 className="code-preview min-h-[350px] max-h-[400px] overflow-auto"
                 data-testid="html-output"
               >
@@ -311,7 +322,7 @@ export default function TextToHTML() {
                 </pre>
               </div>
             ) : (
-              <div 
+              <div
                 className="bg-white text-gray-900 rounded-lg p-6 min-h-[350px] max-h-[400px] overflow-auto prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: getHTML() }}
                 data-testid="html-preview"
