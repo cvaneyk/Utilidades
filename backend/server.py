@@ -366,30 +366,27 @@ async def convert_images_to_webp(files: List[UploadFile] = File(...)):
     
     for file in files:
         try:
-            # Check file size (5MB limit)
+            # Check file size (10MB limit)
             content = await file.read()
-            if len(content) > 5 * 1024 * 1024:
+            if len(content) > 10 * 1024 * 1024:
                 converted_images.append({
                     "original_name": file.filename,
                     "success": False,
-                    "error": "File exceeds 5MB limit"
+                    "error": "File exceeds 10MB limit"
                 })
                 continue
             
-            # Convert to WebP
+            # Open image
             image = Image.open(io.BytesIO(content))
             
-            # Convert to RGB if necessary (for PNG with transparency, etc.)
-            if image.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', image.size, (255, 255, 255))
-                if image.mode == 'P':
-                    image = image.convert('RGBA')
-                background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-                image = background
-            elif image.mode != 'RGB':
+            # Preserve transparency: WebP natively supports RGBA/LA
+            # Only convert to RGB if there is no alpha channel
+            if image.mode == 'P':
+                image = image.convert('RGBA')  # palette → RGBA (keeps transparency)
+            elif image.mode not in ('RGB', 'RGBA', 'LA'):
                 image = image.convert('RGB')
             
-            # Save as WebP with 75% quality for smaller files
+            # Save as WebP — RGBA images keep transparent background
             buffer = io.BytesIO()
             image.save(buffer, format='WEBP', quality=75)
             buffer.seek(0)
@@ -417,7 +414,102 @@ async def convert_images_to_webp(files: List[UploadFile] = File(...)):
     
     return {"images": converted_images}
 
+# ============== IMAGE RESIZER ==============
+
+@api_router.post("/images/resize")
+async def resize_images(
+    files: List[UploadFile] = File(...),
+    width: Optional[int] = Form(None),
+    height: Optional[int] = Form(None),
+    percentage: Optional[int] = Form(None),
+    quality: int = Form(85),
+    output_format: str = Form("WEBP")
+):
+    if len(files) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 images allowed per batch")
+    if output_format not in ("WEBP", "JPEG", "PNG"):
+        raise HTTPException(status_code=400, detail="Format must be WEBP, JPEG, or PNG")
+    if not (width or height or percentage):
+        raise HTTPException(status_code=400, detail="Provide width, height, or percentage")
+
+    resized_images = []
+
+    for file in files:
+        try:
+            content = await file.read()
+            if len(content) > 10 * 1024 * 1024:
+                resized_images.append({
+                    "original_name": file.filename,
+                    "success": False,
+                    "error": "File exceeds 10MB limit"
+                })
+                continue
+
+            image = Image.open(io.BytesIO(content))
+            original_width, original_height = image.size
+
+            # Calculate new dimensions
+            if percentage:
+                new_width = int(original_width * percentage / 100)
+                new_height = int(original_height * percentage / 100)
+            elif width and height:
+                new_width, new_height = width, height
+            elif width:
+                ratio = width / original_width
+                new_width = width
+                new_height = int(original_height * ratio)
+            else:
+                ratio = height / original_height
+                new_width = int(original_width * ratio)
+                new_height = height
+
+            # Resize using high quality Lanczos resampling
+            image = image.resize((new_width, new_height), Image.LANCZOS)
+
+            # Handle mode conversion for output format
+            if output_format in ("JPEG",) and image.mode in ("RGBA", "LA", "P"):
+                background = Image.new("RGB", image.size, (255, 255, 255))
+                if image.mode == "P":
+                    image = image.convert("RGBA")
+                background.paste(image, mask=image.split()[-1] if image.mode == "RGBA" else None)
+                image = background
+            elif image.mode == "P":
+                image = image.convert("RGBA")
+
+            buffer = io.BytesIO()
+            save_kwargs = {"format": output_format}
+            if output_format != "PNG":
+                save_kwargs["quality"] = quality
+            image.save(buffer, **save_kwargs)
+            buffer.seek(0)
+
+            img_base64 = base64.b64encode(buffer.getvalue()).decode()
+            ext = output_format.lower().replace("jpeg", "jpg")
+            original_name = file.filename or "image"
+            new_name = os.path.splitext(original_name)[0] + f".{ext}"
+
+            resized_images.append({
+                "original_name": original_name,
+                "new_name": new_name,
+                "success": True,
+                "img_base64": img_base64,
+                "original_size": f"{original_width}x{original_height}",
+                "new_size": f"{new_width}x{new_height}",
+                "size_bytes": len(buffer.getvalue()),
+                "format": output_format
+            })
+
+        except Exception as e:
+            resized_images.append({
+                "original_name": file.filename,
+                "success": False,
+                "error": str(e)
+            })
+
+    return {"images": resized_images}
+
 # ============== TEXT TO HTML ==============
+
 
 @api_router.post("/text-to-html", response_model=TextToHTMLResponse)
 async def convert_text_to_html(request: TextToHTMLRequest):

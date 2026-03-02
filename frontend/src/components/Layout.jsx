@@ -14,7 +14,8 @@ import {
   Braces,
   Regex,
   Text,
-  Code
+  Code,
+  Scaling
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const navItems = [
   { path: "/qr-generator", icon: QrCode, label: "QR Generator" },
   { path: "/shortlinks", icon: Link2, label: "Shortlinks" },
   { path: "/image-converter", icon: Image, label: "Image to WebP" },
+  { path: "/image-resizer", icon: Scaling, label: "Redimensionar" },
   { path: "/text-to-html", icon: FileCode, label: "Text to HTML" },
   { path: "/password-generator", icon: Key, label: "Password Gen" },
   { path: "/word-counter", icon: Type, label: "Word Counter" },

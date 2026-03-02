@@ -13,6 +13,7 @@ import Base64Tool from "@/pages/Base64Tool";
 import JsonFormatter from "@/pages/JsonFormatter";
 import RegexTester from "@/pages/RegexTester";
 import LoremGenerator from "@/pages/LoremGenerator";
+import ImageResizer from "@/pages/ImageResizer";
 import CodeMinifier from "@/pages/CodeMinifier";
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
             <Route path="regex-tester" element={<RegexTester />} />
             <Route path="lorem-generator" element={<LoremGenerator />} />
             <Route path="code-minifier" element={<CodeMinifier />} />
+            <Route path="image-resizer" element={<ImageResizer />} />
           </Route>
         </Routes>
       </BrowserRouter>
