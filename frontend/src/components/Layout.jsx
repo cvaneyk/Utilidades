@@ -76,7 +76,7 @@ export default function Layout() {
 
         <div className="p-4 border-t border-white/5">
           <div className="text-xs text-muted-foreground text-center">
-            11 herramientas disponibles
+            12 herramientas disponibles
           </div>
         </div>
       </aside>

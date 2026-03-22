@@ -40,8 +40,8 @@ export default function CodeMinifier() {
       .replace(/\s+/g, " ")
       // Remove newlines
       .replace(/\n/g, "")
-      // Fix spacing after keywords
-      .replace(/(if|else|for|while|return|function|var|let|const|new)(\S)/g, "$1 $2")
+      // Fix spacing after keywords (use word boundaries to avoid matching substrings like 'const' in 'constructor' or 'for' in 'force')
+      .replace(/\b(if|else|for|while|return|function|var|let|const|new)\b(\S)/g, "$1 $2")
       .trim();
   };
 
@@ -81,7 +81,7 @@ export default function CodeMinifier() {
       }
 
       setOutput(minified);
-      
+
       const originalSize = new Blob([input]).size;
       const minifiedSize = new Blob([minified]).size;
       const savings = originalSize - minifiedSize;
@@ -225,7 +225,7 @@ const formatCurrency = (amount) => {
             <Button
               onClick={minify}
               className="w-full h-12 text-lg font-semibold"
-              style={{ 
+              style={{
                 background: "linear-gradient(135deg, hsl(220 70% 55%), hsl(250 70% 55%))",
                 boxShadow: "0 0 20px -5px hsl(220 70% 55% / 0.4)"
               }}
@@ -242,9 +242,9 @@ const formatCurrency = (amount) => {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Código Minificado</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={copyOutput}
                 disabled={!output}
                 data-testid="copy-code-btn"
@@ -257,7 +257,7 @@ const formatCurrency = (amount) => {
           <CardContent>
             {output ? (
               <>
-                <div 
+                <div
                   className="code-preview min-h-[300px] max-h-[350px] overflow-auto mb-4"
                   data-testid="code-output"
                 >
@@ -265,7 +265,7 @@ const formatCurrency = (amount) => {
                     {output}
                   </pre>
                 </div>
-                
+
                 {stats && (
                   <div className="grid grid-cols-4 gap-2">
                     <div className="bg-muted/30 rounded-lg p-3 text-center">
