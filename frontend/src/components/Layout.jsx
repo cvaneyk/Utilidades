@@ -15,7 +15,8 @@ import {
   Regex,
   Text,
   Code,
-  Scaling
+  Scaling,
+  Star
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -151,6 +152,18 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {/* GitHub Star Button */}
+      <a
+        href="https://github.com/cvaneyk/Utilidades"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="⭐ Dale una estrella en GitHub"
+        className="github-star-btn"
+      >
+        <Star className="w-4 h-4" />
+        <span>Star</span>
+      </a>
     </div>
   );
 }
