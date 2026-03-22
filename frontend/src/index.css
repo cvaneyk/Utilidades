@@ -413,10 +413,12 @@ textarea:focus-visible {
     transform: rotate(20deg) scale(1.2);
 }
 
-/* On mobile: position below the top bar */
+/* On mobile: position bottom-left */
 @media (max-width: 1023px) {
     .github-star-btn {
-        top: 4.5rem;
-        right: 0.75rem;
+        top: auto;
+        bottom: 1rem;
+        right: auto;
+        left: 1rem;
     }
 }
