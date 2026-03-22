@@ -354,8 +354,8 @@ function setupDevServer(config) {
         return true;
       }
 
-      // Allow all emergent.sh subdomains
-      if (origin.match(/^https:\/\/([a-zA-Z0-9-]+\.)*emergent\.sh$/)) {
+      // Allow all carlosvaneyk.com subdomains
+      if (origin.match(/^https:\/\/([a-zA-Z0-9-]+\.)*carlosvaneyk\.com$/)) {
         return true;
       }
 
@@ -462,8 +462,8 @@ function setupDevServer(config) {
             // Commit the change to git
             const timestamp = Date.now();
             try {
-              execSync(`git -c user.name="visual-edit" -c user.email="support@emergent.sh" add "${result.file}"`);
-              execSync(`git -c user.name="visual-edit" -c user.email="support@emergent.sh" commit -m "visual_edit_variable_${timestamp}"`);
+              execSync(`git -c user.name="visual-edit" -c user.email="support@carlosvaneyk.com" add "${result.file}"`);
+              execSync(`git -c user.name="visual-edit" -c user.email="support@carlosvaneyk.com" commit -m "visual_edit_variable_${timestamp}"`);
             } catch (gitError) {
               console.error(`Git commit failed for variableEdit: ${gitError.message}`);
             }
@@ -905,8 +905,8 @@ function setupDevServer(config) {
           const timestamp = Date.now();
           try {
             // Use -c flag for per-invocation git config to avoid modifying any config
-            execSync(`git -c user.name="visual-edit" -c user.email="support@emergent.sh" add "${targetFile}"`);
-            execSync(`git -c user.name="visual-edit" -c user.email="support@emergent.sh" commit -m "visual_edit_${timestamp}"`);
+            execSync(`git -c user.name="visual-edit" -c user.email="support@carlosvaneyk.com" add "${targetFile}"`);
+            execSync(`git -c user.name="visual-edit" -c user.email="support@carlosvaneyk.com" commit -m "visual_edit_${timestamp}"`);
           } catch (gitError) {
             console.error(`Git commit failed: ${gitError.message}`);
             // Continue even if git fails - file write succeeded
