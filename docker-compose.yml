@@ -46,6 +46,8 @@ services:
 
   # React Frontend
   frontend:
+    expose:
+      - "80" # Solo expone dentro de la red Docker, no al host
     build:
       context: ./frontend
       dockerfile: Dockerfile
