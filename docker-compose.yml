@@ -52,12 +52,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_BACKEND_URL=http://localhost:8001
+        - REACT_APP_BACKEND_URL=http://backend:8001
     container_name: e1-frontend
     restart: unless-stopped
     depends_on:
       - backend
-    ports:
+    # IMPORTANTE: elimina completamente la clave "ports"
     networks:
       - e1-network
 
