@@ -56,7 +56,6 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
     networks:
       - e1-network
 
