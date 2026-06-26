@@ -156,6 +156,15 @@ class Base64Response(BaseModel):
     success: bool
     error: Optional[str] = None
 
+# Image Resize JSON Model
+class ResizeBase64Request(BaseModel):
+    image_base64: str
+    width: Optional[int] = None
+    height: Optional[int] = None
+    percentage: Optional[int] = None
+    quality: int = 85
+    output_format: str = "WEBP"
+
 # ============== ROUTES ==============
 
 @api_router.get("/")
@@ -416,6 +425,52 @@ async def convert_images_to_webp(files: List[UploadFile] = File(...)):
 
 # ============== IMAGE RESIZER ==============
 
+def _resize_image_bytes(content: bytes, width, height, percentage, quality, output_format) -> dict:
+    image = Image.open(io.BytesIO(content))
+    original_width, original_height = image.size
+
+    if percentage:
+        new_width = int(original_width * percentage / 100)
+        new_height = int(original_height * percentage / 100)
+    elif width and height:
+        new_width, new_height = width, height
+    elif width:
+        ratio = width / original_width
+        new_width = width
+        new_height = int(original_height * ratio)
+    else:
+        ratio = height / original_height
+        new_width = int(original_width * ratio)
+        new_height = height
+
+    image = image.resize((new_width, new_height), Image.LANCZOS)
+
+    if output_format == "JPEG" and image.mode in ("RGBA", "LA", "P"):
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        if image.mode == "P":
+            image = image.convert("RGBA")
+        background.paste(image, mask=image.split()[-1] if image.mode == "RGBA" else None)
+        image = background
+    elif image.mode == "P":
+        image = image.convert("RGBA")
+
+    buffer = io.BytesIO()
+    save_kwargs = {"format": output_format}
+    if output_format != "PNG":
+        save_kwargs["quality"] = quality
+    image.save(buffer, **save_kwargs)
+    buffer.seek(0)
+
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+    return {
+        "img_base64": img_base64,
+        "original_size": f"{original_width}x{original_height}",
+        "new_size": f"{new_width}x{new_height}",
+        "size_bytes": len(buffer.getvalue()),
+        "format": output_format,
+    }
+
+
 @api_router.post("/images/resize")
 async def resize_images(
     files: List[UploadFile] = File(...),
@@ -445,45 +500,7 @@ async def resize_images(
                 })
                 continue
 
-            image = Image.open(io.BytesIO(content))
-            original_width, original_height = image.size
-
-            # Calculate new dimensions
-            if percentage:
-                new_width = int(original_width * percentage / 100)
-                new_height = int(original_height * percentage / 100)
-            elif width and height:
-                new_width, new_height = width, height
-            elif width:
-                ratio = width / original_width
-                new_width = width
-                new_height = int(original_height * ratio)
-            else:
-                ratio = height / original_height
-                new_width = int(original_width * ratio)
-                new_height = height
-
-            # Resize using high quality Lanczos resampling
-            image = image.resize((new_width, new_height), Image.LANCZOS)
-
-            # Handle mode conversion for output format
-            if output_format in ("JPEG",) and image.mode in ("RGBA", "LA", "P"):
-                background = Image.new("RGB", image.size, (255, 255, 255))
-                if image.mode == "P":
-                    image = image.convert("RGBA")
-                background.paste(image, mask=image.split()[-1] if image.mode == "RGBA" else None)
-                image = background
-            elif image.mode == "P":
-                image = image.convert("RGBA")
-
-            buffer = io.BytesIO()
-            save_kwargs = {"format": output_format}
-            if output_format != "PNG":
-                save_kwargs["quality"] = quality
-            image.save(buffer, **save_kwargs)
-            buffer.seek(0)
-
-            img_base64 = base64.b64encode(buffer.getvalue()).decode()
+            result = _resize_image_bytes(content, width, height, percentage, quality, output_format)
             ext = output_format.lower().replace("jpeg", "jpg")
             original_name = file.filename or "image"
             new_name = os.path.splitext(original_name)[0] + f".{ext}"
@@ -492,11 +509,7 @@ async def resize_images(
                 "original_name": original_name,
                 "new_name": new_name,
                 "success": True,
-                "img_base64": img_base64,
-                "original_size": f"{original_width}x{original_height}",
-                "new_size": f"{new_width}x{new_height}",
-                "size_bytes": len(buffer.getvalue()),
-                "format": output_format
+                **result,
             })
 
         except Exception as e:
@@ -507,6 +520,28 @@ async def resize_images(
             })
 
     return {"images": resized_images}
+
+
+@api_router.post("/images/resize-base64")
+async def resize_image_base64(req: ResizeBase64Request):
+    if req.output_format not in ("WEBP", "JPEG", "PNG"):
+        raise HTTPException(status_code=400, detail="Format must be WEBP, JPEG, or PNG")
+    if not (req.width or req.height or req.percentage):
+        raise HTTPException(status_code=400, detail="Provide width, height, or percentage")
+
+    try:
+        content = base64.b64decode(req.image_base64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid base64 image data")
+
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image exceeds 10MB limit")
+
+    try:
+        result = _resize_image_bytes(content, req.width, req.height, req.percentage, req.quality, req.output_format)
+        return {"success": True, **result}
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 # ============== TEXT TO HTML ==============
 
