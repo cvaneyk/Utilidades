@@ -16,7 +16,9 @@ import {
   Text,
   Code,
   Scaling,
-  Star
+  Star,
+  Film,
+  Shapes
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,8 @@ const navItems = [
   { path: "/regex-tester", icon: Regex, label: "Regex Tester" },
   { path: "/lorem-generator", icon: Text, label: "Lorem Ipsum" },
   { path: "/code-minifier", icon: Code, label: "Code Minifier" },
+  { path: "/video-converter", icon: Film, label: "MOV a MP4" },
+  { path: "/svg-editor", icon: Shapes, label: "Editor SVG" },
 ];
 
 export default function Layout() {
@@ -77,7 +81,7 @@ export default function Layout() {
 
         <div className="p-4 border-t border-white/5">
           <div className="text-xs text-muted-foreground text-center">
-            12 herramientas disponibles
+            14 herramientas disponibles
           </div>
         </div>
       </aside>

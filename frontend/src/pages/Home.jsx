@@ -13,7 +13,9 @@ import {
   Regex,
   Text,
   Code,
-  Scaling
+  Scaling,
+  Film,
+  Shapes
 } from "lucide-react";
 
 const utilities = [
@@ -112,6 +114,22 @@ const utilities = [
     description: "Codifica y decodifica texto a/desde formato Base64",
     color: "from-lime-500 to-green-400",
     bgGlow: "group-hover:shadow-[0_0_40px_-10px_hsl(85_70%_50%/0.4)]"
+  },
+  {
+    path: "/video-converter",
+    icon: Film,
+    title: "MOV a MP4",
+    description: "Convierte vídeos QuickTime a MP4 con API para n8n y automatizaciones",
+    color: "from-red-500 to-rose-400",
+    bgGlow: "group-hover:shadow-[0_0_40px_-10px_hsl(0_80%_55%/0.4)]"
+  },
+  {
+    path: "/svg-editor",
+    icon: Shapes,
+    title: "Editor SVG",
+    description: "Edita código SVG con vista previa en vivo y exporta como SVG o PNG",
+    color: "from-fuchsia-500 to-pink-400",
+    bgGlow: "group-hover:shadow-[0_0_40px_-10px_hsl(300_80%_55%/0.4)]"
   }
 ];
 
@@ -124,7 +142,7 @@ export default function Home() {
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />
-            <span>12 Herramientas Potentes en Un Solo Lugar</span>
+            <span>14 Herramientas Potentes en Un Solo Lugar</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
             Utilities
@@ -163,7 +181,7 @@ export default function Home() {
       {/* Quick Stats */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="stat-card text-center">
-          <div className="text-3xl font-bold text-primary">12</div>
+          <div className="text-3xl font-bold text-primary">14</div>
           <div className="text-sm text-muted-foreground">Herramientas</div>
         </div>
         <div className="stat-card text-center">

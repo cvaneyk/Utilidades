@@ -73,9 +73,16 @@ Donde `mongodb` es el nombre del servicio (DNS interno de Docker).
    MONGO_URL=mongodb://mongodb:27017
    DB_NAME=e1_utility_suite
    CORS_ORIGINS=https://tu-dominio.com,https://www.tu-dominio.com
+   CONVERT_API_KEY=una-clave-secreta-larga
    ```
    > **Nota:** Si MongoDB tiene autenticación, usa la URL completa con credenciales en `MONGO_URL`.
    > Reemplaza `tu-dominio.com` con tu dominio real en `CORS_ORIGINS`.
+   > `CONVERT_API_KEY` protege el conversor de vídeo MOV→MP4 (`/api/video/convert`): las llamadas deben incluir el header `X-API-Key`. Si no la defines, el endpoint queda público (no recomendado en producción — ffmpeg consume mucha CPU).
+   > Opcionales: `MAX_VIDEO_SIZE_MB` (por defecto 200) y `VIDEO_TIMEOUT_SECONDS` (por defecto 600).
+
+   > 🎬 **Nota sobre ffmpeg:** la imagen del backend ahora instala ffmpeg (añade ~250-300MB al tamaño de la imagen). El primer build tras este cambio tardará más.
+
+   > ⚠️ **Límites del proxy de EasyPanel:** el conversor acepta vídeos de hasta 200MB y conversiones de hasta 10 minutos. Si EasyPanel/Traefik impone límites de tamaño de body o timeouts más bajos en tu instalación, auméntalos para el servicio backend (y frontend si accedes vía `/api/` proxeado por nginx) o las subidas grandes fallarán con 413/504.
 
 4. **Dominio** (en la pestaña Domains):
    - Añade un dominio: `api.tu-dominio.com` o usa el generado por Easypanel
@@ -185,6 +192,8 @@ docker-compose up -d --build
    - **Word Counter**: Pega un texto y verifica el conteo
    - **Base64**: Codifica/decodifica un texto
    - **Image Converter**: Sube una imagen para convertir a WebP
+   - **MOV a MP4**: Sube un vídeo .mov corto y verifica que descarga el .mp4 (introduce la API key si configuraste `CONVERT_API_KEY`)
+   - **Editor SVG**: Pega un SVG y exporta como PNG (funciona 100% en el navegador)
 
 ---
 

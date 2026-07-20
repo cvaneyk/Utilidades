@@ -34,6 +34,7 @@ services:
       - MONGO_URL=mongodb://mongodb:27017
       - DB_NAME=e1_utility_suite
       - CORS_ORIGINS=http://localhost:3000,http://localhost,https://tu-dominio.com
+      - CONVERT_API_KEY=${CONVERT_API_KEY:-}
     ports:
       - "8001:8001"
     networks:

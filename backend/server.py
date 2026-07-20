@@ -1,5 +1,5 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Response, Form
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Response, Form, Header, Depends, BackgroundTasks
+from fastapi.responses import StreamingResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -21,6 +21,9 @@ import string
 import secrets
 import re
 import httpx
+import asyncio
+import shutil
+import tempfile
 
 ROOT_DIR = Path(__file__).parent
 
@@ -44,6 +47,11 @@ async def shorten_with_isgd(url: str) -> dict:
     except Exception as e:
         return {"success": False, "error": str(e)}
 load_dotenv(ROOT_DIR / '.env')
+
+# Video converter config
+CONVERT_API_KEY = os.environ.get("CONVERT_API_KEY", "")
+MAX_VIDEO_SIZE_MB = int(os.environ.get("MAX_VIDEO_SIZE_MB", "200"))
+VIDEO_TIMEOUT_SECONDS = int(os.environ.get("VIDEO_TIMEOUT_SECONDS", "600"))
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -695,6 +703,101 @@ async def process_base64(request: Base64Request):
             return Base64Response(result="", success=False, error="Invalid operation")
     except Exception as e:
         return Base64Response(result="", success=False, error=str(e))
+
+# ============== VIDEO CONVERTER ==============
+
+VIDEO_ALLOWED_EXTENSIONS = {".mov", ".qt", ".mp4", ".m4v", ".avi", ".mkv", ".webm"}
+VIDEO_QUALITY_PRESETS = {
+    "fast": ["-preset", "veryfast", "-crf", "26"],
+    "balanced": ["-preset", "medium", "-crf", "23"],
+    "quality": ["-preset", "slow", "-crf", "20"],
+}
+
+def require_convert_key(x_api_key: Optional[str] = Header(None)):
+    if CONVERT_API_KEY:
+        if not x_api_key or not secrets.compare_digest(x_api_key, CONVERT_API_KEY):
+            raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
+
+@api_router.get("/video/health")
+async def video_health():
+    return {
+        "ffmpeg": shutil.which("ffmpeg") is not None,
+        "auth_required": bool(CONVERT_API_KEY),
+        "max_size_mb": MAX_VIDEO_SIZE_MB,
+    }
+
+@api_router.post("/video/convert", dependencies=[Depends(require_convert_key)])
+async def convert_video(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    quality: str = Form("balanced"),
+):
+    """Convert a video (MOV/QuickTime, etc.) to MP4 (H.264 + AAC). Returns the MP4 binary."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in VIDEO_ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(VIDEO_ALLOWED_EXTENSIONS))}"
+        )
+    if quality not in VIDEO_QUALITY_PRESETS:
+        raise HTTPException(status_code=400, detail=f"Invalid quality. Allowed: {', '.join(VIDEO_QUALITY_PRESETS)}")
+    if shutil.which("ffmpeg") is None:
+        raise HTTPException(status_code=503, detail="ffmpeg is not installed on the server")
+
+    tmpdir = tempfile.mkdtemp(prefix="vidconv_")
+    in_path = os.path.join(tmpdir, f"input{ext}")
+    out_path = os.path.join(tmpdir, "output.mp4")
+    max_bytes = MAX_VIDEO_SIZE_MB * 1024 * 1024
+
+    try:
+        total = 0
+        with open(in_path, "wb") as f:
+            while chunk := await file.read(1024 * 1024):
+                total += len(chunk)
+                if total > max_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large. Maximum size is {MAX_VIDEO_SIZE_MB}MB"
+                    )
+                f.write(chunk)
+        if total == 0:
+            raise HTTPException(status_code=400, detail="Empty file")
+
+        cmd = [
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+            "-i", in_path,
+            "-c:v", "libx264", *VIDEO_QUALITY_PRESETS[quality],
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            out_path,
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=VIDEO_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            raise HTTPException(
+                status_code=504,
+                detail=f"Conversion timed out after {VIDEO_TIMEOUT_SECONDS}s"
+            )
+        if proc.returncode != 0:
+            raise HTTPException(
+                status_code=422,
+                detail=f"ffmpeg failed: {stderr.decode(errors='replace')[-500:]}"
+            )
+    except Exception:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+
+    background_tasks.add_task(shutil.rmtree, tmpdir, ignore_errors=True)
+    out_name = os.path.splitext(os.path.basename(file.filename or "video"))[0] + ".mp4"
+    return FileResponse(out_path, media_type="video/mp4", filename=out_name)
 
 # Include the router in the main app
 app.include_router(api_router)

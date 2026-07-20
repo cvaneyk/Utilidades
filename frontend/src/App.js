@@ -15,6 +15,8 @@ import RegexTester from "@/pages/RegexTester";
 import LoremGenerator from "@/pages/LoremGenerator";
 import ImageResizer from "@/pages/ImageResizer";
 import CodeMinifier from "@/pages/CodeMinifier";
+import VideoConverter from "@/pages/VideoConverter";
+import SvgEditor from "@/pages/SvgEditor";
 
 function App() {
   return (
@@ -35,6 +37,8 @@ function App() {
             <Route path="lorem-generator" element={<LoremGenerator />} />
             <Route path="code-minifier" element={<CodeMinifier />} />
             <Route path="image-resizer" element={<ImageResizer />} />
+            <Route path="video-converter" element={<VideoConverter />} />
+            <Route path="svg-editor" element={<SvgEditor />} />
           </Route>
         </Routes>
       </BrowserRouter>

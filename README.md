@@ -17,6 +17,8 @@ Una suite de utilidades web todo-en-uno, con frontend en React y backend en Fast
 | 📝 **Convertidor Texto → HTML** | Transforma texto plano o Markdown a HTML válido con soporte para encabezados, negritas, cursivas, listas, código y enlaces. |
 | 🔢 **Contador de palabras** | Analiza un texto y devuelve caracteres totales, caracteres sin espacios, palabras, frases, párrafos y tiempo estimado de lectura. |
 | 🔐 **Codificador/Decodificador Base64** | Codifica o decodifica texto en Base64 de forma instantánea. |
+| 🎬 **Conversor MOV → MP4** | Convierte vídeos QuickTime (.mov y otros formatos) a MP4 (H.264 + AAC) con ffmpeg. Incluye API síncrona protegida por API key, ideal para n8n y automatizaciones. |
+| ✒️ **Editor SVG** | Edita código SVG con resaltado de sintaxis y vista previa en vivo. Sube un archivo .svg o pega el código, y descarga el resultado como SVG o PNG (escala configurable, fondo transparente). |
 
 ---
 
@@ -67,6 +69,9 @@ La app estará disponible en:
 | `MONGO_URL` | Cadena de conexión a MongoDB | `mongodb://mongo:27017` |
 | `DB_NAME` | Nombre de la base de datos | `utilidades` |
 | `CORS_ORIGINS` | Orígenes permitidos para CORS | `http://localhost:3000` |
+| `CONVERT_API_KEY` | (Opcional) API key para proteger el conversor de vídeo. Si no se define, el endpoint es público | `mi-clave-secreta` |
+| `MAX_VIDEO_SIZE_MB` | (Opcional) Tamaño máximo de vídeo aceptado, por defecto 200 | `200` |
+| `VIDEO_TIMEOUT_SECONDS` | (Opcional) Tiempo máximo de conversión, por defecto 600 | `600` |
 
 ---
 
@@ -89,6 +94,20 @@ Consulta la guía detallada en [`DEPLOY_EASYPANEL.md`](./DEPLOY_EASYPANEL.md).
 | `POST` | `/api/text-to-html` | Convierte texto/Markdown a HTML |
 | `POST` | `/api/word-counter` | Cuenta palabras y caracteres |
 | `POST` | `/api/base64` | Codifica / decodifica Base64 |
+| `POST` | `/api/video/convert` | Convierte un vídeo (MOV, etc.) a MP4 y devuelve el binario. Header `X-API-Key` si `CONVERT_API_KEY` está configurada. Campos form-data: `file` (binario) y `quality` (`fast`/`balanced`/`quality`) |
+| `GET` | `/api/video/health` | Estado del conversor: ffmpeg disponible, si requiere API key y tamaño máximo |
+
+### Ejemplo: convertir MOV a MP4 desde n8n o curl
+
+```bash
+curl -X POST https://tu-dominio.com/api/video/convert \
+  -H "X-API-Key: TU_API_KEY" \
+  -F "file=@video.mov" \
+  -F "quality=balanced" \
+  -o video.mp4
+```
+
+En n8n, usa el nodo **HTTP Request**: método `POST`, header `X-API-Key`, body `Form-Data` con el campo binario `file`, y formato de respuesta `File`.
 
 ---
 
@@ -106,6 +125,7 @@ Consulta la guía detallada en [`DEPLOY_EASYPANEL.md`](./DEPLOY_EASYPANEL.md).
 - FastAPI
 - Motor (MongoDB async driver)
 - Pillow (procesamiento de imágenes)
+- ffmpeg (conversión de vídeo)
 - qrcode
 - httpx
 
