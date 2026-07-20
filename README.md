@@ -72,6 +72,7 @@ La app estará disponible en:
 | `CONVERT_API_KEY` | (Opcional) API key para proteger el conversor de vídeo. Si no se define, el endpoint es público | `mi-clave-secreta` |
 | `MAX_VIDEO_SIZE_MB` | (Opcional) Tamaño máximo de vídeo aceptado, por defecto 200 | `200` |
 | `VIDEO_TIMEOUT_SECONDS` | (Opcional) Tiempo máximo de conversión, por defecto 600 | `600` |
+| `VIDEO_JOB_TTL_SECONDS` | (Opcional) Tiempo de vida de los jobs asíncronos y sus archivos, por defecto 3600 | `3600` |
 
 ---
 
@@ -94,20 +95,30 @@ Consulta la guía detallada en [`DEPLOY_EASYPANEL.md`](./DEPLOY_EASYPANEL.md).
 | `POST` | `/api/text-to-html` | Convierte texto/Markdown a HTML |
 | `POST` | `/api/word-counter` | Cuenta palabras y caracteres |
 | `POST` | `/api/base64` | Codifica / decodifica Base64 |
-| `POST` | `/api/video/convert` | Convierte un vídeo (MOV, etc.) a MP4 y devuelve el binario. Header `X-API-Key` si `CONVERT_API_KEY` está configurada. Campos form-data: `file` (binario) y `quality` (`fast`/`balanced`/`quality`) |
+| `POST` | `/api/video/convert` | Conversión síncrona a MP4: la respuesta es el binario. Solo para vídeos cortos (los proxies suelen cortar peticiones largas). Header `X-API-Key` si `CONVERT_API_KEY` está configurada. Campos form-data: `file` (binario) y `quality` (`fast`/`balanced`/`quality`) |
+| `POST` | `/api/video/convert/async` | Conversión asíncrona (recomendada): devuelve `{"job_id": "..."}` al instante. Mismos campos y auth que la síncrona |
+| `GET` | `/api/video/jobs/{job_id}` | Estado del job: `processing`, `done` o `error` |
+| `GET` | `/api/video/jobs/{job_id}/download` | Descarga el MP4 cuando el job está `done`. Los jobs expiran a la hora (`VIDEO_JOB_TTL_SECONDS`) |
 | `GET` | `/api/video/health` | Estado del conversor: ffmpeg disponible, si requiere API key y tamaño máximo |
 
-### Ejemplo: convertir MOV a MP4 desde n8n o curl
+### Ejemplo: convertir MOV a MP4 desde n8n o curl (flujo asíncrono)
 
 ```bash
-curl -X POST https://tu-dominio.com/api/video/convert \
+# 1. Subir el vídeo → devuelve el job_id al instante
+curl -X POST https://tu-dominio.com/api/video/convert/async \
   -H "X-API-Key: TU_API_KEY" \
-  -F "file=@video.mov" \
-  -F "quality=balanced" \
-  -o video.mp4
+  -F "file=@video.mov" -F "quality=balanced"
+# → {"job_id": "abc123", "status": "processing"}
+
+# 2. Consultar estado (repetir hasta "done")
+curl -H "X-API-Key: TU_API_KEY" https://tu-dominio.com/api/video/jobs/abc123
+
+# 3. Descargar el resultado
+curl -H "X-API-Key: TU_API_KEY" \
+  https://tu-dominio.com/api/video/jobs/abc123/download -o video.mp4
 ```
 
-En n8n, usa el nodo **HTTP Request**: método `POST`, header `X-API-Key`, body `Form-Data` con el campo binario `file`, y formato de respuesta `File`.
+En n8n: nodo **HTTP Request** (POST async, body `Form-Data` con campo binario `file`) → nodo **Wait** → **HTTP Request** GET del estado en bucle hasta `done` → **HTTP Request** GET de descarga con formato de respuesta `File`. Para vídeos cortos también puedes llamar directamente a `POST /api/video/convert` (síncrono).
 
 ---
 

@@ -64,6 +64,10 @@ export default function VideoConverter() {
         acceptFile(e.dataTransfer.files?.[0]);
     }, [acceptFile]);
 
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Flujo asíncrono con jobs: cada petición HTTP es corta, así ningún proxy
+    // intermedio (Traefik, Cloudflare...) corta la conexión durante conversiones largas.
     const convert = async () => {
         if (!file) {
             toast.error("Selecciona un vídeo primero");
@@ -71,31 +75,50 @@ export default function VideoConverter() {
         }
         setPhase("uploading");
         setUploadProgress(0);
+        const headers = apiKey ? { "X-API-Key": apiKey } : {};
         try {
             const formData = new FormData();
             formData.append("file", file);
             formData.append("quality", quality);
 
-            const response = await axios.post(`${API}/video/convert`, formData, {
-                headers: apiKey ? { "X-API-Key": apiKey } : {},
-                responseType: "blob",
+            const created = await axios.post(`${API}/video/convert/async`, formData, {
+                headers,
                 timeout: 0,
                 onUploadProgress: (e) => {
                     if (!e.total) return;
-                    const pct = Math.round((e.loaded * 100) / e.total);
-                    setUploadProgress(pct);
-                    if (e.loaded === e.total) setPhase("converting");
+                    setUploadProgress(Math.round((e.loaded * 100) / e.total));
                 },
             });
+            const jobId = created.data.job_id;
+            setPhase("converting");
 
+            const startedAt = Date.now();
+            const maxWaitMs = 20 * 60 * 1000;
+            for (;;) {
+                await sleep(3000);
+                const { data: job } = await axios.get(`${API}/video/jobs/${jobId}`, { headers });
+                if (job.status === "done") break;
+                if (job.status === "error") {
+                    throw new Error(job.detail || "La conversión falló en el servidor");
+                }
+                if (Date.now() - startedAt > maxWaitMs) {
+                    throw new Error("La conversión tardó demasiado y se canceló la espera");
+                }
+            }
+
+            const download = await axios.get(`${API}/video/jobs/${jobId}/download`, {
+                headers,
+                responseType: "blob",
+                timeout: 0,
+            });
             const outName = file.name.replace(/\.[^.]+$/, "") + ".mp4";
-            saveAs(response.data, outName);
-            setLastResult({ name: outName, size: response.data.size });
+            saveAs(download.data, outName);
+            setLastResult({ name: outName, size: download.data.size });
             setPhase("done");
             toast.success("¡Vídeo convertido a MP4!");
         } catch (error) {
             setPhase("idle");
-            let detail = "Error al convertir el vídeo";
+            let detail = error.message || "Error al convertir el vídeo";
             if (error.response?.data instanceof Blob) {
                 try {
                     detail = JSON.parse(await error.response.data.text()).detail || detail;
@@ -117,11 +140,22 @@ export default function VideoConverter() {
     };
 
     const busy = phase === "uploading" || phase === "converting";
-    const curlSnippet = `curl -X POST ${window.location.origin}/api/video/convert \\
+    const curlSnippet = `# Opción A — síncrono (vídeos cortos; la respuesta es el MP4):
+curl -X POST ${window.location.origin}/api/video/convert \\
   -H "X-API-Key: TU_API_KEY" \\
-  -F "file=@video.mov" \\
-  -F "quality=balanced" \\
-  -o video.mp4`;
+  -F "file=@video.mov" -F "quality=balanced" -o video.mp4
+
+# Opción B — asíncrono (recomendado para vídeos largos):
+curl -X POST ${window.location.origin}/api/video/convert/async \\
+  -H "X-API-Key: TU_API_KEY" \\
+  -F "file=@video.mov" -F "quality=balanced"
+# → {"job_id": "abc123", "status": "processing"}
+
+curl -H "X-API-Key: TU_API_KEY" ${window.location.origin}/api/video/jobs/abc123
+# → {"status": "done", ...}  (repetir hasta que sea "done")
+
+curl -H "X-API-Key: TU_API_KEY" \\
+  ${window.location.origin}/api/video/jobs/abc123/download -o video.mp4`;
 
     return (
         <div className="animate-in space-y-6">
@@ -252,19 +286,19 @@ export default function VideoConverter() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                         <p className="text-sm text-muted-foreground">
-                            Endpoint síncrono: envía el vídeo por <code className="text-primary">POST multipart</code> y la respuesta es directamente el archivo MP4.
+                            Hay dos modos: <span className="text-foreground">síncrono</span> (la respuesta es directamente el MP4 — solo para vídeos cortos, los proxies suelen cortar peticiones de varios minutos) y <span className="text-foreground">asíncrono</span> (devuelve un <code className="text-primary">job_id</code>, consultas el estado y descargas al terminar — recomendado).
                             {authRequired && " Este servidor requiere el header X-API-Key."}
                         </p>
                         <pre className="p-4 bg-black/30 rounded-lg text-xs overflow-x-auto border border-white/5">
                             <code>{curlSnippet}</code>
                         </pre>
                         <div className="text-sm text-muted-foreground space-y-1">
-                            <p className="font-medium text-foreground">En n8n (nodo HTTP Request):</p>
+                            <p className="font-medium text-foreground">En n8n (flujo asíncrono recomendado):</p>
                             <ul className="list-disc list-inside space-y-0.5 text-xs">
-                                <li>Method: <code>POST</code> — URL: <code>{window.location.origin}/api/video/convert</code></li>
-                                <li>Header: <code>X-API-Key</code> con tu clave{!authRequired && " (si está configurada)"}</li>
-                                <li>Body: <code>Form-Data</code> → campo <code>file</code> de tipo binario + campo <code>quality</code> (fast / balanced / quality)</li>
-                                <li>Response format: <code>File</code> — recibirás el MP4 como binario</li>
+                                <li><strong>HTTP Request 1:</strong> <code>POST {window.location.origin}/api/video/convert/async</code> — header <code>X-API-Key</code>, body <code>Form-Data</code> con campo binario <code>file</code> → devuelve <code>job_id</code></li>
+                                <li><strong>Wait</strong> (ej. 10s) + <strong>HTTP Request 2:</strong> <code>GET .../api/video/jobs/{"{{job_id}}"}</code> — repite (nodo If en loop) hasta que <code>status</code> sea <code>done</code></li>
+                                <li><strong>HTTP Request 3:</strong> <code>GET .../api/video/jobs/{"{{job_id}}"}/download</code> — Response format <code>File</code> → recibes el MP4</li>
+                                <li>Para vídeos cortos puedes usar directamente <code>POST /api/video/convert</code> (síncrono, respuesta = MP4)</li>
                             </ul>
                         </div>
                     </CardContent>
