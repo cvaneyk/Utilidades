@@ -118,8 +118,8 @@ const utilities = [
   {
     path: "/video-converter",
     icon: Film,
-    title: "MOV a MP4",
-    description: "Convierte vídeos QuickTime a MP4 con API para n8n y automatizaciones",
+    title: "Conversor de Vídeo",
+    description: "Convierte vídeos entre MOV, MP4 y WebM, con API para n8n y automatizaciones",
     color: "from-red-500 to-rose-400",
     bgGlow: "group-hover:shadow-[0_0_40px_-10px_hsl(0_80%_55%/0.4)]"
   },

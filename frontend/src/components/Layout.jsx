@@ -38,7 +38,7 @@ const navItems = [
   { path: "/regex-tester", icon: Regex, label: "Regex Tester" },
   { path: "/lorem-generator", icon: Text, label: "Lorem Ipsum" },
   { path: "/code-minifier", icon: Code, label: "Code Minifier" },
-  { path: "/video-converter", icon: Film, label: "MOV a MP4" },
+  { path: "/video-converter", icon: Film, label: "Conversor de Vídeo" },
   { path: "/svg-editor", icon: Shapes, label: "Editor SVG" },
 ];
 

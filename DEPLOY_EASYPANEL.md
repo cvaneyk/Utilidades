@@ -77,7 +77,7 @@ Donde `mongodb` es el nombre del servicio (DNS interno de Docker).
    ```
    > **Nota:** Si MongoDB tiene autenticación, usa la URL completa con credenciales en `MONGO_URL`.
    > Reemplaza `tu-dominio.com` con tu dominio real en `CORS_ORIGINS`.
-   > `CONVERT_API_KEY` protege el conversor de vídeo MOV→MP4 (`/api/video/convert`): las llamadas deben incluir el header `X-API-Key`. Si no la defines, el endpoint queda público (no recomendado en producción — ffmpeg consume mucha CPU).
+   > `CONVERT_API_KEY` protege el conversor de vídeo (`/api/video/convert`, salida MP4 o WebM): las llamadas deben incluir el header `X-API-Key`. Si no la defines, el endpoint queda público (no recomendado en producción — ffmpeg consume mucha CPU).
    > Opcionales: `MAX_VIDEO_SIZE_MB` (por defecto 200) y `VIDEO_TIMEOUT_SECONDS` (por defecto 600).
 
    > 🎬 **Nota sobre ffmpeg:** la imagen del backend ahora instala ffmpeg (añade ~250-300MB al tamaño de la imagen). El primer build tras este cambio tardará más.
@@ -192,7 +192,7 @@ docker-compose up -d --build
    - **Word Counter**: Pega un texto y verifica el conteo
    - **Base64**: Codifica/decodifica un texto
    - **Image Converter**: Sube una imagen para convertir a WebP
-   - **MOV a MP4**: Sube un vídeo .mov corto y verifica que descarga el .mp4 (introduce la API key si configuraste `CONVERT_API_KEY`)
+   - **Conversor de Vídeo**: Sube un vídeo .mov corto, elige formato de salida (MP4 o WebM) y verifica que descarga correctamente (introduce la API key si configuraste `CONVERT_API_KEY`)
    - **Editor SVG**: Pega un SVG y exporta como PNG (funciona 100% en el navegador)
 
 ---

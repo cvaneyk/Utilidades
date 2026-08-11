@@ -708,10 +708,31 @@ async def process_base64(request: Base64Request):
 # ============== VIDEO CONVERTER ==============
 
 VIDEO_ALLOWED_EXTENSIONS = {".mov", ".qt", ".mp4", ".m4v", ".avi", ".mkv", ".webm"}
-VIDEO_QUALITY_PRESETS = {
-    "fast": ["-preset", "veryfast", "-crf", "26"],
-    "balanced": ["-preset", "medium", "-crf", "23"],
-    "quality": ["-preset", "slow", "-crf", "20"],
+VIDEO_OUTPUT_FORMATS = {
+    "mp4": {
+        "ext": ".mp4",
+        "media_type": "video/mp4",
+        "video_codec": ["-c:v", "libx264"],
+        "video_extra": ["-pix_fmt", "yuv420p", "-movflags", "+faststart"],
+        "audio_codec": ["-c:a", "aac", "-b:a", "128k"],
+        "presets": {
+            "fast": ["-preset", "veryfast", "-crf", "26"],
+            "balanced": ["-preset", "medium", "-crf", "23"],
+            "quality": ["-preset", "slow", "-crf", "20"],
+        },
+    },
+    "webm": {
+        "ext": ".webm",
+        "media_type": "video/webm",
+        "video_codec": ["-c:v", "libvpx-vp9"],
+        "video_extra": ["-b:v", "0"],
+        "audio_codec": ["-c:a", "libopus", "-b:a", "128k"],
+        "presets": {
+            "fast": ["-crf", "36", "-deadline", "realtime", "-cpu-used", "5"],
+            "balanced": ["-crf", "32", "-deadline", "good", "-cpu-used", "2"],
+            "quality": ["-crf", "28", "-deadline", "good", "-cpu-used", "0"],
+        },
+    },
 }
 
 def require_convert_key(x_api_key: Optional[str] = Header(None)):
@@ -739,7 +760,7 @@ def _purge_video_jobs():
             shutil.rmtree(job["tmpdir"], ignore_errors=True)
             VIDEO_JOBS.pop(job_id, None)
 
-async def _save_video_upload(file: UploadFile):
+async def _save_video_upload(file: UploadFile, target_format: str):
     """Validate and stream the upload to a temp dir. Returns (tmpdir, in_path, out_name)."""
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in VIDEO_ALLOWED_EXTENSIONS:
@@ -770,18 +791,17 @@ async def _save_video_upload(file: UploadFile):
         shutil.rmtree(tmpdir, ignore_errors=True)
         raise
 
-    out_name = os.path.splitext(os.path.basename(file.filename or "video"))[0] + ".mp4"
+    out_name = os.path.splitext(os.path.basename(file.filename or "video"))[0] + VIDEO_OUTPUT_FORMATS[target_format]["ext"]
     return tmpdir, in_path, out_name
 
-async def _run_ffmpeg_convert(in_path: str, out_path: str, quality: str):
+async def _run_ffmpeg_convert(in_path: str, out_path: str, quality: str, target_format: str):
     """Run ffmpeg. Raises HTTPException on timeout or failure."""
+    fmt = VIDEO_OUTPUT_FORMATS[target_format]
     cmd = [
         "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
         "-i", in_path,
-        "-c:v", "libx264", *VIDEO_QUALITY_PRESETS[quality],
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
+        *fmt["video_codec"], *fmt["presets"][quality], *fmt["video_extra"],
+        *fmt["audio_codec"],
         out_path,
     ]
     proc = await asyncio.create_subprocess_exec(
@@ -809,7 +829,7 @@ async def _run_video_job(job_id: str):
     if not job:
         return
     try:
-        await _run_ffmpeg_convert(job["in_path"], job["out_path"], job["quality"])
+        await _run_ffmpeg_convert(job["in_path"], job["out_path"], job["quality"], job["target_format"])
         job["status"] = "done"
     except HTTPException as e:
         job["status"] = "error"
@@ -818,47 +838,57 @@ async def _run_video_job(job_id: str):
         job["status"] = "error"
         job["detail"] = str(e)
 
+def _validate_video_params(quality: str, target_format: str):
+    if target_format not in VIDEO_OUTPUT_FORMATS:
+        raise HTTPException(status_code=400, detail=f"Invalid format. Allowed: {', '.join(VIDEO_OUTPUT_FORMATS)}")
+    if quality not in VIDEO_OUTPUT_FORMATS[target_format]["presets"]:
+        raise HTTPException(status_code=400, detail=f"Invalid quality. Allowed: {', '.join(VIDEO_OUTPUT_FORMATS[target_format]['presets'])}")
+
 @api_router.post("/video/convert", dependencies=[Depends(require_convert_key)])
 async def convert_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     quality: str = Form("balanced"),
+    target_format: str = Form("mp4"),
 ):
-    """Synchronous conversion: returns the MP4 binary in the same request.
+    """Synchronous conversion: returns the converted video binary in the same request.
     Best for short videos or clients behind proxies with generous timeouts."""
-    if quality not in VIDEO_QUALITY_PRESETS:
-        raise HTTPException(status_code=400, detail=f"Invalid quality. Allowed: {', '.join(VIDEO_QUALITY_PRESETS)}")
-    tmpdir, in_path, out_name = await _save_video_upload(file)
-    out_path = os.path.join(tmpdir, "output.mp4")
+    _validate_video_params(quality, target_format)
+    fmt = VIDEO_OUTPUT_FORMATS[target_format]
+    tmpdir, in_path, out_name = await _save_video_upload(file, target_format)
+    out_path = os.path.join(tmpdir, f"output{fmt['ext']}")
     try:
-        await _run_ffmpeg_convert(in_path, out_path, quality)
+        await _run_ffmpeg_convert(in_path, out_path, quality, target_format)
     except Exception:
         shutil.rmtree(tmpdir, ignore_errors=True)
         raise
     background_tasks.add_task(shutil.rmtree, tmpdir, ignore_errors=True)
-    return FileResponse(out_path, media_type="video/mp4", filename=out_name)
+    return FileResponse(out_path, media_type=fmt["media_type"], filename=out_name)
 
 @api_router.post("/video/convert/async", dependencies=[Depends(require_convert_key)])
 async def convert_video_async(
     file: UploadFile = File(...),
     quality: str = Form("balanced"),
+    target_format: str = Form("mp4"),
 ):
     """Async conversion: returns a job_id immediately. Poll /video/jobs/{id} and
     download from /video/jobs/{id}/download when done. Each request is short-lived,
     so intermediate proxies (Traefik, Cloudflare) never time out."""
-    if quality not in VIDEO_QUALITY_PRESETS:
-        raise HTTPException(status_code=400, detail=f"Invalid quality. Allowed: {', '.join(VIDEO_QUALITY_PRESETS)}")
+    _validate_video_params(quality, target_format)
+    fmt = VIDEO_OUTPUT_FORMATS[target_format]
     _purge_video_jobs()
-    tmpdir, in_path, out_name = await _save_video_upload(file)
+    tmpdir, in_path, out_name = await _save_video_upload(file, target_format)
     job_id = uuid.uuid4().hex
     VIDEO_JOBS[job_id] = {
         "status": "processing",
         "detail": None,
         "tmpdir": tmpdir,
         "in_path": in_path,
-        "out_path": os.path.join(tmpdir, "output.mp4"),
+        "out_path": os.path.join(tmpdir, f"output{fmt['ext']}"),
         "out_name": out_name,
         "quality": quality,
+        "target_format": target_format,
+        "media_type": fmt["media_type"],
         "created_at": datetime.now(timezone.utc).timestamp(),
     }
     asyncio.create_task(_run_video_job(job_id))
@@ -880,7 +910,7 @@ async def video_job_download(job_id: str):
         raise HTTPException(status_code=422, detail=job["detail"] or "Conversion failed")
     if job["status"] != "done":
         raise HTTPException(status_code=409, detail="Conversion still in progress")
-    return FileResponse(job["out_path"], media_type="video/mp4", filename=job["out_name"])
+    return FileResponse(job["out_path"], media_type=job["media_type"], filename=job["out_name"])
 
 # Include the router in the main app
 app.include_router(api_router)

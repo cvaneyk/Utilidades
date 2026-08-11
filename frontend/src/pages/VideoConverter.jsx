@@ -19,6 +19,7 @@ export default function VideoConverter() {
     const [file, setFile] = useState(null);
     const [dragging, setDragging] = useState(false);
     const [quality, setQuality] = useState("balanced");
+    const [targetFormat, setTargetFormat] = useState("mp4");
     const [apiKey, setApiKey] = useState(() => localStorage.getItem("convert_api_key") || "");
     const [authRequired, setAuthRequired] = useState(false);
     const [maxSizeMb, setMaxSizeMb] = useState(MAX_SIZE_MB_DEFAULT);
@@ -80,6 +81,7 @@ export default function VideoConverter() {
             const formData = new FormData();
             formData.append("file", file);
             formData.append("quality", quality);
+            formData.append("target_format", targetFormat);
 
             const created = await axios.post(`${API}/video/convert/async`, formData, {
                 headers,
@@ -111,11 +113,11 @@ export default function VideoConverter() {
                 responseType: "blob",
                 timeout: 0,
             });
-            const outName = file.name.replace(/\.[^.]+$/, "") + ".mp4";
+            const outName = file.name.replace(/\.[^.]+$/, "") + "." + targetFormat;
             saveAs(download.data, outName);
             setLastResult({ name: outName, size: download.data.size });
             setPhase("done");
-            toast.success("¡Vídeo convertido a MP4!");
+            toast.success(`¡Vídeo convertido a ${targetFormat.toUpperCase()}!`);
         } catch (error) {
             setPhase("idle");
             let detail = error.message || "Error al convertir el vídeo";
@@ -140,22 +142,24 @@ export default function VideoConverter() {
     };
 
     const busy = phase === "uploading" || phase === "converting";
-    const curlSnippet = `# Opción A — síncrono (vídeos cortos; la respuesta es el MP4):
+    const curlSnippet = `# Opción A — síncrono (vídeos cortos; la respuesta es el vídeo convertido):
 curl -X POST ${window.location.origin}/api/video/convert \\
   -H "X-API-Key: TU_API_KEY" \\
-  -F "file=@video.mov" -F "quality=balanced" -o video.mp4
+  -F "file=@video.mov" -F "quality=balanced" -F "target_format=mp4" -o video.mp4
 
 # Opción B — asíncrono (recomendado para vídeos largos):
 curl -X POST ${window.location.origin}/api/video/convert/async \\
   -H "X-API-Key: TU_API_KEY" \\
-  -F "file=@video.mov" -F "quality=balanced"
+  -F "file=@video.mov" -F "quality=balanced" -F "target_format=webm"
 # → {"job_id": "abc123", "status": "processing"}
 
 curl -H "X-API-Key: TU_API_KEY" ${window.location.origin}/api/video/jobs/abc123
 # → {"status": "done", ...}  (repetir hasta que sea "done")
 
 curl -H "X-API-Key: TU_API_KEY" \\
-  ${window.location.origin}/api/video/jobs/abc123/download -o video.mp4`;
+  ${window.location.origin}/api/video/jobs/abc123/download -o video.webm
+
+# target_format acepta "mp4" (H.264 + AAC) o "webm" (VP9 + Opus). Por defecto: mp4.`;
 
     return (
         <div className="animate-in space-y-6">
@@ -164,8 +168,8 @@ curl -H "X-API-Key: TU_API_KEY" \\
                     <Film className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">MOV a MP4</h1>
-                    <p className="text-muted-foreground">Convierte vídeos QuickTime (.mov) a MP4 compatible con todo</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Conversor de Vídeo</h1>
+                    <p className="text-muted-foreground">Convierte entre MOV, MP4, AVI, MKV y WebM</p>
                 </div>
             </div>
 
@@ -176,7 +180,19 @@ curl -H "X-API-Key: TU_API_KEY" \\
                         <CardTitle className="text-lg">Configuración</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                                <Label>Formato de salida</Label>
+                                <Select value={targetFormat} onValueChange={setTargetFormat}>
+                                    <SelectTrigger className="bg-black/20 border-white/10">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="mp4">MP4 (H.264 + AAC)</SelectItem>
+                                        <SelectItem value="webm">WebM (VP9 + Opus)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div className="space-y-1.5">
                                 <Label>Calidad</Label>
                                 <Select value={quality} onValueChange={setQuality}>
@@ -221,7 +237,7 @@ curl -H "X-API-Key: TU_API_KEY" \\
                         >
                             <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
                             <p className="font-medium">Arrastra un vídeo aquí o haz clic para seleccionar</p>
-                            <p className="text-sm text-muted-foreground mt-1">MOV, MP4, AVI, MKV, WebM — hasta {maxSizeMb}MB</p>
+                            <p className="text-sm text-muted-foreground mt-1">MOV, MP4, AVI, MKV, WebM — hasta {maxSizeMb}MB · salida en MP4 o WebM</p>
                             <input
                                 id="video-converter-input"
                                 type="file"
@@ -268,7 +284,7 @@ curl -H "X-API-Key: TU_API_KEY" \\
                                     {busy ? (
                                         <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{phase === "uploading" ? "Subiendo..." : "Convirtiendo..."}</>
                                     ) : (
-                                        <><Download className="w-5 h-5 mr-2" />Convertir a MP4</>
+                                        <><Download className="w-5 h-5 mr-2" />Convertir a {targetFormat.toUpperCase()}</>
                                     )}
                                 </Button>
                             </div>
@@ -286,7 +302,7 @@ curl -H "X-API-Key: TU_API_KEY" \\
                     </CardHeader>
                     <CardContent className="space-y-3">
                         <p className="text-sm text-muted-foreground">
-                            Hay dos modos: <span className="text-foreground">síncrono</span> (la respuesta es directamente el MP4 — solo para vídeos cortos, los proxies suelen cortar peticiones de varios minutos) y <span className="text-foreground">asíncrono</span> (devuelve un <code className="text-primary">job_id</code>, consultas el estado y descargas al terminar — recomendado).
+                            Hay dos modos: <span className="text-foreground">síncrono</span> (la respuesta es directamente el vídeo convertido — solo para vídeos cortos, los proxies suelen cortar peticiones de varios minutos) y <span className="text-foreground">asíncrono</span> (devuelve un <code className="text-primary">job_id</code>, consultas el estado y descargas al terminar — recomendado). El campo <code className="text-primary">target_format</code> (<code className="text-primary">mp4</code> o <code className="text-primary">webm</code>) es opcional, por defecto <code className="text-primary">mp4</code>.
                             {authRequired && " Este servidor requiere el header X-API-Key."}
                         </p>
                         <pre className="p-4 bg-black/30 rounded-lg text-xs overflow-x-auto border border-white/5">
@@ -295,10 +311,10 @@ curl -H "X-API-Key: TU_API_KEY" \\
                         <div className="text-sm text-muted-foreground space-y-1">
                             <p className="font-medium text-foreground">En n8n (flujo asíncrono recomendado):</p>
                             <ul className="list-disc list-inside space-y-0.5 text-xs">
-                                <li><strong>HTTP Request 1:</strong> <code>POST {window.location.origin}/api/video/convert/async</code> — header <code>X-API-Key</code>, body <code>Form-Data</code> con campo binario <code>file</code> → devuelve <code>job_id</code></li>
+                                <li><strong>HTTP Request 1:</strong> <code>POST {window.location.origin}/api/video/convert/async</code> — header <code>X-API-Key</code>, body <code>Form-Data</code> con campo binario <code>file</code> y campo <code>target_format</code> (<code>mp4</code>/<code>webm</code>) → devuelve <code>job_id</code></li>
                                 <li><strong>Wait</strong> (ej. 10s) + <strong>HTTP Request 2:</strong> <code>GET .../api/video/jobs/{"{{job_id}}"}</code> — repite (nodo If en loop) hasta que <code>status</code> sea <code>done</code></li>
-                                <li><strong>HTTP Request 3:</strong> <code>GET .../api/video/jobs/{"{{job_id}}"}/download</code> — Response format <code>File</code> → recibes el MP4</li>
-                                <li>Para vídeos cortos puedes usar directamente <code>POST /api/video/convert</code> (síncrono, respuesta = MP4)</li>
+                                <li><strong>HTTP Request 3:</strong> <code>GET .../api/video/jobs/{"{{job_id}}"}/download</code> — Response format <code>File</code> → recibes el vídeo convertido</li>
+                                <li>Para vídeos cortos puedes usar directamente <code>POST /api/video/convert</code> (síncrono, respuesta = vídeo convertido)</li>
                             </ul>
                         </div>
                     </CardContent>
