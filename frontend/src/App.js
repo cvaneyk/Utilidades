@@ -17,6 +17,7 @@ import ImageResizer from "@/pages/ImageResizer";
 import CodeMinifier from "@/pages/CodeMinifier";
 import VideoConverter from "@/pages/VideoConverter";
 import SvgEditor from "@/pages/SvgEditor";
+import CronTool from "@/pages/CronTool";
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
             <Route path="image-resizer" element={<ImageResizer />} />
             <Route path="video-converter" element={<VideoConverter />} />
             <Route path="svg-editor" element={<SvgEditor />} />
+            <Route path="cron" element={<CronTool />} />
           </Route>
         </Routes>
       </BrowserRouter>

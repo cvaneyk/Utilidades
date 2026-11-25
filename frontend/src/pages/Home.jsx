@@ -15,7 +15,8 @@ import {
   Code,
   Scaling,
   Film,
-  Shapes
+  Shapes,
+  Clock
 } from "lucide-react";
 
 const utilities = [
@@ -130,6 +131,14 @@ const utilities = [
     description: "Edita código SVG con vista previa en vivo y exporta como SVG o PNG",
     color: "from-fuchsia-500 to-pink-400",
     bgGlow: "group-hover:shadow-[0_0_40px_-10px_hsl(300_80%_55%/0.4)]"
+  },
+  {
+    path: "/cron",
+    icon: Clock,
+    title: "Validador Cron",
+    description: "Valida expresiones cron, genera horarios visualmente y consulta próximas ejecuciones",
+    color: "from-amber-500 to-orange-500",
+    bgGlow: "group-hover:shadow-[0_0_40px_-10px_hsl(35_95%_55%/0.4)]"
   }
 ];
 
@@ -142,7 +151,7 @@ export default function Home() {
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />
-            <span>14 Herramientas Potentes en Un Solo Lugar</span>
+            <span>{utilities.length} Herramientas Potentes en Un Solo Lugar</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
             Utilities
@@ -181,7 +190,7 @@ export default function Home() {
       {/* Quick Stats */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="stat-card text-center">
-          <div className="text-3xl font-bold text-primary">14</div>
+          <div className="text-3xl font-bold text-primary">{utilities.length}</div>
           <div className="text-sm text-muted-foreground">Herramientas</div>
         </div>
         <div className="stat-card text-center">

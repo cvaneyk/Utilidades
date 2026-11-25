@@ -18,7 +18,8 @@ import {
   Scaling,
   Star,
   Film,
-  Shapes
+  Shapes,
+  Clock
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const navItems = [
   { path: "/code-minifier", icon: Code, label: "Code Minifier" },
   { path: "/video-converter", icon: Film, label: "Conversor de Vídeo" },
   { path: "/svg-editor", icon: Shapes, label: "Editor SVG" },
+  { path: "/cron", icon: Clock, label: "Validador Cron" },
 ];
 
 export default function Layout() {
@@ -81,7 +83,7 @@ export default function Layout() {
 
         <div className="p-4 border-t border-white/5">
           <div className="text-xs text-muted-foreground text-center">
-            14 herramientas disponibles
+            {navItems.length - 1} herramientas disponibles
           </div>
         </div>
       </aside>

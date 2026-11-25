@@ -19,6 +19,7 @@ Una suite de utilidades web todo-en-uno, con frontend en React y backend en Fast
 | 🔐 **Codificador/Decodificador Base64** | Codifica o decodifica texto en Base64 de forma instantánea. |
 | 🎬 **Conversor de Vídeo** | Convierte vídeos (MOV, MP4, AVI, MKV, WebM) a MP4 (H.264 + AAC) o WebM (VP9 + Opus) con ffmpeg. Incluye API síncrona/asíncrona protegida por API key, ideal para n8n y automatizaciones. |
 | ✒️ **Editor SVG** | Edita código SVG con resaltado de sintaxis y vista previa en vivo. Sube un archivo .svg o pega el código, y descarga el resultado como SVG o PNG (escala configurable, fondo transparente). |
+| ⏱️ **Validador y Generador Cron** | Valida expresiones cron (5 y 6 campos + atajos `@daily`, `@hourly`, etc.), explica cada campo en español, calcula las próximas ejecuciones e incluye generador visual y ejemplos listos para usar. |
 
 ---
 
